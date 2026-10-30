@@ -1101,7 +1101,11 @@ fn paint_grid(bounds: Bounds<Pixels>, grid: &Rc<RefCell<Grid>>, focused: bool, w
             images.push((below, Bounds::new(pos, size(px(width), px(height))), img.clone()));
         }
     }
-    g.images.retain(|k, _| keep.contains(k));
+    // A frame's texture stays in the window's atlas until dropped, even after
+    // its image leaves the map: each new frame of a moving image would leak one.
+    for (_, gone) in g.images.extract_if(|k, _| !keep.contains(k)) {
+        let _ = window.drop_image(gone);
+    }
     let link_spans = g.link_spans.clone();
     let marked = g.marked.clone();
     drop(g);
